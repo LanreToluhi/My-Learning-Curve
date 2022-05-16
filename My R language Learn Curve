@@ -1,0 +1,201 @@
+## Assignment Solution
+```{r}
+library(hflights)
+hflights
+
+MLT <- filter(hflights, Year == 2011, Month == 4)
+MLT
+MLT2 <- filter(hflights, UniqueCarrier %in% c("AA" , "WN"))
+MLT2
+```
+
+## Reading the data for T-test
+```{r}
+dt3 <- read.csv("data_r/class.csv", header = T)
+t.test(dt3$MorningClass, dt3$EveningClass, alternative = "greater")
+
+
+```
+
+## Loading the Data for Regression
+
+```{r}
+LR1 <- read.csv("data_r/Gym.csv", header = T)
+LR1
+
+
+```
+
+## Checking significant difference using Paired T-test
+
+```{r}
+
+Simu <- data.frame(Simulation = c(12,7,3,11,8,5,14,7,9,10), No_Simulation = c(8,7,4,14,6,7,12,5,5,8))
+result<- t.test(Simu$Simulation, Simu$No_Simulation, alternative = "less", paired = TRUE)
+result
+
+```
+
+
+## Checking significant difference using Unpaired T-Test
+```{r}
+Simu2 <- data.frame(Older_Adults = c(45,38,52,48,25,39,51,46,55,46), Younger_Adults = c(34,22,15,27,37,41,24,19,26,36))
+result2<- t.test(Simu2$Older_Adults, Simu2$Younger_Adults, alternative = "two.sided")
+result2
+
+```
+
+# The goal is to determine if there is a relationship between TotalExpenditure and TotalRealGDP. 
+
+
+```{r}
+library(readxl)
+regress <- read_excel("datasets.xlsx")
+regress
+library(ggplot2)
+reg1 <- ggplot(regress, aes(x=TotalExpenditure, y=TotalRealGDP)) + geom_point() + labs(title = "Realtionship between TotalRealGDP and TotalExpenditure", xlab="TotalExpenditure", ylab="TotalRealGDP")
+reg1
+
+Model1 <- lm(TotalRealGDP~TotalExpenditure, data=regress)
+summary(Model1)
+
+hist(Model1$residuals,
+     xlab = "Residuals", main = "Histograph of Residuals")
+
+
+
+```
+
+## The residuals are skewed to the left, which indicates that the assumption of normality of residuals is not been obey
+
+######## REPORTS ########
+
+# The output depicts that the linear equation is; y=Intercept(1.914e+04) + Total Expenditure(7.62e+00)
+
+
+## Since the p-value of the coeffiecent of Total Expenditure is 2.2e-16, which is lesser than 0.5, this tells that the Total Expenditure has significant effect on the Total Real GDP
+
+### The intercept is also significant, at 5% level.
+
+#### Therefore, to interpret the coefficient of Total Expenditure, for  unit increase in Total Expenditure, the total Real GDP increases by 7.620e+00.
+
+##### The Adjusted R Squared is interpreted as the amount of variation of the dependent variable that can be explained by the independent variable. For the model, the 91.56% of the Total variation in Total Real GDP can be explained by the Total Expenditure. Therefore, we can go ahead to implement this model...
+
+```{r}
+library(readr)
+Logi<- read.csv("recruitment.csv", header = T)
+mod1<-glm(Status~Gender+read+math,data = Logi, family = binomial)
+summary(mod1)
+
+
+```
+
+## Codes on Clustering Analysis.
+```{r}
+install.packages("factoextra")
+install.packages("cluster")
+library(factoextra)
+library(cluster)
+install.packages("animation")
+library(animation)
+library(dplyr)
+
+```
+
+```{r}
+Clust <- read.csv("computers.csv", header = T)
+ClustDF<- Clust %>% select(-c(X, cd, multi, premium))
+rescale_ClustDf <- ClustDF %>%
+mutate(price_scal = scale(price),
+hd_scal = scale(hd),
+ram_scal = scale(ram),
+screen_scal = scale(screen),
+ads_scal = scale(ads),
+trend_scal = scale(trend)) %>%
+select(-c(price, speed, hd, ram, screen, ads, trend))
+
+kmeans.ani(rescale_ClustDf[2:3], 3)
+
+Kelbow <- fviz_nbclust(rescale_ClustDf, FUN = kmeans, method = "wss")
+Kelbow
+
+Silhouette <- fviz_nbclust(rescale_ClustDf, FUN = kmeans, method = "silhouette")
+Silhouette
+
+```
+
+
+```{r}
+set.seed(1020)
+PcClustrer <-kmeans(rescale_ClustDf, 3)
+PcClustrer$size
+
+new_Data <- ClustDF %>%
+mutate(cluster = PcClustrer$cluster) 
+new_Data
+
+fviz_cluster(PcClustrer, data = rescale_ClustDf)
+
+Pic <- ggplot(new_Data, aes(x=as.factor(cluster), y=price)) + geom_boxplot()
+Pic
+
+```
+
+
+```{r}
+## Hierarchical Clustering 
+
+library(cluster)
+library(tidyverse)
+library(factoextra)
+data("iris")
+df<-iris%>%select(-c(Species))
+glimpse(df)
+
+d <- dist(df, method = "euclidean")
+ag_1 <- hclust(d, method = "complete")
+ag_1
+plot(ag_1, cex = 0.0002, hang = -0.9)
+
+## Agglomerative Coefficient
+ag_methods<-list(average="average",single="single",complete="complete",ward="ward")
+a_coeff <- function(x) {
+agnes(df, method = x)$ac
+}
+map_dbl(ag_methods,a_coeff)
+
+## Divisive Clustering
+d_clus<-diana(df)
+d_clus$dc
+
+## Using Gap Statistics to find Optimal clusters(k)
+g_p <- clusGap(df, FUN = hcut, K.max = 10)
+fviz_gap_stat(g_p)
+
+## Using Elbow Method to find Optimal clusters(k)
+fviz_nbclust(df, FUN = hcut, method = "wss")
+
+## Using Elbow Method to find Optimal clusters(k)
+fviz_nbclust(df, FUN = hcut, method = "silhouette")
+
+ # cut To the chosen clusters
+ag_final<- hclust(d, method = "ward.D2")
+c_grp <- cutree(ag_final, k = 3)
+table(c_grp)
+
+# Adding the clusters to our data
+n_d<-df%>%mutate(cluster = c_grp) 
+n_d[1:15, ]
+
+## Visualizing our cluster
+fviz_cluster(list(data = df, cluster = c_grp))
+
+```
+
+```{r}
+## ANOVA to check significant difference in Income based on Product
+
+ana <- read.csv("Gym.csv", header = T)
+Anv <- aov(Income~Product, data = ana)
+summary(Anv)
+```
